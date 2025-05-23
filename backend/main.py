@@ -34,6 +34,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add custom headers middleware to help with debugging
+@app.middleware("http")
+async def add_custom_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Server-Status"] = "Running"
+    return response
+
 # Create database tables on startup
 @app.on_event("startup")
 def on_startup():
@@ -46,6 +53,7 @@ async def root():
 
 # User registration endpoint
 @app.post("/users/", response_model=UserResponse)
+@app.post("/register", response_model=UserResponse)  # Alternative endpoint for registration
 async def create_user(user: UserCreate, session: Session = Depends(get_session)):
     # Check if user with same email exists
     db_user = session.exec(select(User).where(User.email == user.email)).first()
@@ -91,11 +99,17 @@ async def read_users_me(current_user: User = Depends(get_current_active_user)):
     return current_user
 
 # AI consultation endpoint
-@app.post("/ai/consult/", response_model=ChatResponse)
+@app.post("/ai/chat", response_model=ChatResponse)
 async def consult_ai(request: ChatRequest, current_user: User = Depends(get_current_active_user)):
     return await generate_ai_response(request)
 
+# Alternative AI consultation endpoint (keeping for backward compatibility)
+@app.post("/ai/consult/", response_model=ChatResponse)
+async def consult_ai_alt(request: ChatRequest, current_user: User = Depends(get_current_active_user)):
+    return await generate_ai_response(request)
+
 # Mock AI response endpoint (for testing)
+@app.post("/ai/mock-chat")
 @app.post("/ai/mock-consult/")
 async def mock_consult(messages: List[ChatMessage], current_user: User = Depends(get_current_active_user)):
     response = generate_mock_response(messages)
@@ -103,4 +117,5 @@ async def mock_consult(messages: List[ChatMessage], current_user: User = Depends
 
 # Run the application
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8888, reload=True)
+    # Use port 8000 to match your frontend configuration
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

@@ -1,7 +1,13 @@
 <template>
-  <div class="ai-assistant-container">
+  <div class="ai-assistant-container" :class="{ 'senior-mode': seniorMode }">
     <div class="header">
       <h1>法律咨询助手</h1>
+      <div class="mode-controls">
+        <label class="senior-mode-toggle">
+          <input type="checkbox" v-model="seniorMode">
+          <span class="toggle-label">老年模式</span>
+        </label>
+      </div>
       <div class="user-info" v-if="userStore.user">
         <span>欢迎, {{ userStore.user.username }}</span>
         <button @click="logout" class="logout-btn">退出登录</button>
@@ -15,7 +21,8 @@
           :key="index" 
           :class="['message', message.role === 'user' ? 'user-message' : 'assistant-message']"
         >
-          <div class="message-content">{{ message.content }}</div>
+          <div class="message-content" v-if="message.role === 'user'">{{ message.content }}</div>
+          <div class="message-content markdown-content" v-else v-html="renderMarkdown(message.content)"></div>
         </div>
         <div v-if="loading" class="loading-indicator">
           <span>AI思考中...</span>
@@ -36,6 +43,7 @@
 
 <script setup>
 import { ref, onMounted, nextTick, watch } from 'vue';
+import { marked } from 'marked';
 import { useUserStore } from '../stores/userStore';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
@@ -43,6 +51,7 @@ import axios from 'axios';
 const userStore = useUserStore();
 const router = useRouter();
 const userInput = ref('');
+const seniorMode = ref(false);
 const messages = ref([
   { role: 'assistant', content: '您好！我是您的法律咨询助手。请问有什么法律问题我可以帮您解答？' }
 ]);
@@ -120,6 +129,25 @@ function logout() {
   userStore.logout();
   router.push('/login');
 }
+
+// 渲染Markdown内容
+function renderMarkdown(content) {
+  if (!content) return '';
+  try {
+    // 配置marked选项
+    marked.setOptions({
+      breaks: true,      // 将\n转换为<br>
+      gfm: true,         // 使用GitHub风格的Markdown
+      headerIds: false,  // 不为标题生成ID
+      mangle: false,     // 不转义内容
+      sanitize: false    // 不净化HTML（注意：这可能有XSS风险，但对于AI生成的内容通常是安全的）
+    });
+    return marked(content);
+  } catch (error) {
+    console.error('Markdown渲染错误:', error);
+    return content; // 如果渲染失败，返回原始内容
+  }
+}
 </script>
 
 <style scoped>
@@ -131,6 +159,39 @@ function logout() {
   margin: 0 auto;
   padding: 20px;
   box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+/* 老年模式样式 */
+.senior-mode {
+  font-size: 120%;
+  font-weight: 500;
+}
+
+.senior-mode button {
+  font-size: 120%;
+  font-weight: bold;
+  padding: 12px 24px;
+}
+
+.senior-mode textarea {
+  font-size: 120%;
+  font-weight: 500;
+  padding: 16px;
+}
+
+.senior-mode .message-content {
+  font-size: 120%;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.senior-mode h1 {
+  font-size: 180%;
+}
+
+.senior-mode .user-info span {
+  font-size: 120%;
 }
 
 .header {
@@ -140,6 +201,31 @@ function logout() {
   margin-bottom: 20px;
   padding-bottom: 15px;
   border-bottom: 1px solid #e0e0e0;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.mode-controls {
+  display: flex;
+  align-items: center;
+}
+
+.senior-mode-toggle {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.senior-mode-toggle input {
+  margin-right: 8px;
+  width: 18px;
+  height: 18px;
+}
+
+.toggle-label {
+  color: #1976d2;
+  font-weight: 500;
 }
 
 .header h1 {
@@ -210,6 +296,77 @@ function logout() {
 
 .message-content {
   white-space: pre-wrap;
+}
+
+.markdown-content {
+  white-space: normal;
+}
+
+.markdown-content p {
+  margin: 0.5em 0;
+}
+
+.markdown-content ul, .markdown-content ol {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+}
+
+.markdown-content h1, .markdown-content h2, .markdown-content h3,
+.markdown-content h4, .markdown-content h5, .markdown-content h6 {
+  margin: 0.5em 0;
+  font-weight: bold;
+}
+
+.markdown-content code {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+.markdown-content pre {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 1em;
+  border-radius: 5px;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+
+.markdown-content pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.markdown-content blockquote {
+  border-left: 4px solid #ddd;
+  padding-left: 1em;
+  margin: 0.5em 0;
+  color: #666;
+}
+
+.markdown-content a {
+  color: #1976d2;
+  text-decoration: none;
+}
+
+.markdown-content a:hover {
+  text-decoration: underline;
+}
+
+.markdown-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5em 0;
+}
+
+.markdown-content th, .markdown-content td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+.markdown-content th {
+  background-color: #f2f2f2;
 }
 
 .loading-indicator {

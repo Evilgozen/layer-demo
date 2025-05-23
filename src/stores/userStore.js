@@ -38,7 +38,7 @@ export const useUserStore = defineStore('user', {
       
       try {
         // 确保设置正确的Content-Type头部
-        const response = await axios.post('http://localhost:8000/token', {
+        const response = await axios.post('http://127.0.0.1:8000/login', {
           username,
           password
         }, {
