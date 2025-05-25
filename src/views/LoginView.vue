@@ -1,7 +1,7 @@
 <template>
   <div class="login-container">
     <a-card class="login-card" title="理工包青天 - 法律援助助手">
-      <a-typography-title level="2" class="login-title">用户登录</a-typography-title>
+      <a-typography-title :level="2" class="login-title">用户登录</a-typography-title>
       
       <a-alert v-if="userStore.error" type="error" :message="userStore.error" show-icon class="login-alert" />
       

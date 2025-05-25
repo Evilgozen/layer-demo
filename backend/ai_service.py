@@ -34,10 +34,30 @@ async def generate_ai_response(request: ChatRequest) -> ChatResponse:
             usage={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
         )
     
+    # 法律咨询系统提示
+    legal_system_prompt = {
+        "role": "system",
+        "content": """你是一名持有中国执业资格的律师，专注于综合法律领域，包括劳动法、合同法、婚姻法和民商事纠纷等。请以通俗易懂的方式解答问题，并明确说明回答的法律依据（如《中华人民共和国民法典》第X条）。
+
+免责声明：
+你的回答不构成正式法律意见，具体案件请建议用户咨询线下律师。当前信息基于中国大陆法律，如涉及其他地区请说明。
+
+回答格式：
+1. 先简要分析用户的法律问题
+2. 提供相关法律条文和依据
+3. 给出具体的法律建议和可操作性方案
+4. 如有必要，说明潜在风险和注意事项
+
+请保持专业、客观，同时语言应平易近人，避免过多专业术语。"""
+    }
+    
     # 准备发送给DeepSeek API的请求数据
+    messages = [legal_system_prompt]
+    messages.extend([{"role": msg.role, "content": msg.content} for msg in request.messages])
+    
     payload = {
         "model": request.model,
-        "messages": [{"role": msg.role, "content": msg.content} for msg in request.messages],
+        "messages": messages,
         "temperature": request.temperature,
         "max_tokens": request.max_tokens,
         "stream": request.stream

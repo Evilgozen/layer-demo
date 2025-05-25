@@ -1,6 +1,7 @@
-from sqlmodel import Field, Session, SQLModel, create_engine, select
-from typing import Optional
+from sqlmodel import Field, Session, SQLModel, create_engine, select, JSON, Column
+from typing import Optional, List, Dict, Any
 import os
+from datetime import datetime
 
 # Create SQLite database file in the current directory
 sqlite_file_name = "legal_consultation.db"
@@ -17,6 +18,25 @@ class User(SQLModel, table=True):
     hashed_password: str
     full_name: Optional[str] = None
     is_active: bool = True
+
+
+# Define ChatMessage model
+class ChatMessage(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    conversation_id: int = Field(foreign_key="chatconversation.id")
+    role: str  # 'user' or 'assistant'
+    content: str
+    timestamp: datetime = Field(default_factory=datetime.now)
+    order: int  # To maintain the order of messages in a conversation
+
+
+# Define ChatConversation model
+class ChatConversation(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id")
+    title: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
 
 # Create the database tables
 def create_db_and_tables():
