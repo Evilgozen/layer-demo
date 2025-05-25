@@ -1,7 +1,7 @@
 import os
 import json
 import httpx
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, AsyncGenerator
 from pydantic import BaseModel
 
 # 配置DeepSeek API
@@ -17,22 +17,20 @@ class ChatRequest(BaseModel):
     model: str = "deepseek-chat"
     temperature: float = 0.7
     max_tokens: int = 2000
-    stream: bool = False
+    stream: bool = True
 
 class ChatResponse(BaseModel):
     response: str
     usage: Optional[Dict[str, Any]] = None
 
-async def generate_ai_response(request: ChatRequest) -> ChatResponse:
+async def generate_ai_response(request: ChatRequest) -> AsyncGenerator[str, None]:
     """
-    调用DeepSeek API生成回复
+    调用DeepSeek API生成回复 (流式)
     """
     if not DEEPSEEK_API_KEY:
         # 如果没有API密钥，返回一个模拟响应
-        return ChatResponse(
-            response="我是一个模拟的AI助手。由于没有配置DeepSeek API密钥，我无法提供真实的AI回复。请联系管理员配置API密钥。",
-            usage={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
-        )
+        yield "我是一个模拟的AI助手。由于没有配置DeepSeek API密钥，我无法提供真实的AI回复。请联系管理员配置API密钥。"
+        return
     
     # 法律咨询系统提示
     legal_system_prompt = {
@@ -51,16 +49,15 @@ async def generate_ai_response(request: ChatRequest) -> ChatResponse:
 请保持专业、客观，同时语言应平易近人，避免过多专业术语。"""
     }
     
-    # 准备发送给DeepSeek API的请求数据
-    messages = [legal_system_prompt]
-    messages.extend([{"role": msg.role, "content": msg.content} for msg in request.messages])
+    messages_payload = [legal_system_prompt]
+    messages_payload.extend([{"role": msg.role, "content": msg.content} for msg in request.messages])
     
     payload = {
         "model": request.model,
-        "messages": messages,
+        "messages": messages_payload,
         "temperature": request.temperature,
         "max_tokens": request.max_tokens,
-        "stream": request.stream
+        "stream": True
     }
     
     headers = {
@@ -70,36 +67,43 @@ async def generate_ai_response(request: ChatRequest) -> ChatResponse:
     
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(
+            async with client.stream(
+                "POST",
                 DEEPSEEK_API_URL,
                 headers=headers,
                 json=payload
-            )
-            
-            if response.status_code != 200:
-                # 处理API错误
-                error_detail = response.json().get("error", {}).get("message", "Unknown error")
-                return ChatResponse(
-                    response=f"API请求错误: {error_detail}",
-                    usage={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
-                )
-            
-            # 解析API响应
-            result = response.json()
-            assistant_message = result.get("choices", [{}])[0].get("message", {}).get("content", "")
-            usage = result.get("usage", {})
-            
-            return ChatResponse(
-                response=assistant_message,
-                usage=usage
-            )
-            
+            ) as response:
+                if response.status_code != 200:
+                    error_content = await response.aread()
+                    try:
+                        error_detail = json.loads(error_content.decode()).get("error", {}).get("message", "Unknown error")
+                    except json.JSONDecodeError:
+                        error_detail = error_content.decode() if error_content else "Unknown error"
+                    yield f"API请求错误: {response.status_code} - {error_detail}"
+                    return
+
+                async for line in response.aiter_lines():
+                    if line.startswith("data:"):
+                        data_str = line[len("data:"):].strip()
+                        if data_str == "[DONE]":
+                            break
+                        try:
+                            chunk = json.loads(data_str)
+                            if chunk.get("choices") and len(chunk["choices"]) > 0:
+                                delta = chunk["choices"][0].get("delta")
+                                if delta and delta.get("content"):
+                                    yield delta["content"]
+                        except json.JSONDecodeError:
+                            # Handle cases where a line might not be perfect JSON or is an empty keep-alive
+                            # print(f"Skipping non-JSON line: {data_str}")
+                            pass # Or log this if it's unexpected
+                            
+    except httpx.ReadTimeout:
+        yield "请求 DeepSeek API 超时。请稍后再试。"
+    except httpx.ConnectError:
+        yield "无法连接到 DeepSeek API。请检查您的网络连接。"
     except Exception as e:
-        # 处理网络或其他错误
-        return ChatResponse(
-            response=f"发生错误: {str(e)}",
-            usage={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
-        )
+        yield f"发生错误: {str(e)}"
 
 # 模拟AI响应的函数，用于测试或当API密钥未配置时
 def generate_mock_response(messages: List[ChatMessage]) -> str:

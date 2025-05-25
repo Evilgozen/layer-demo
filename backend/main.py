@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
+from fastapi.responses import StreamingResponse
 from sqlmodel import Session, select
 from typing import List
 import uvicorn
@@ -120,14 +121,15 @@ async def read_users_me(current_user: User = Depends(get_current_active_user)):
     return current_user
 
 # AI consultation endpoint
-@app.post("/ai/chat", response_model=ChatResponse)
+@app.post("/api/ai/chat")
 async def consult_ai(request: ChatRequest, current_user: User = Depends(get_current_active_user)):
-    return await generate_ai_response(request)
+    return StreamingResponse(generate_ai_response(request), media_type="text/event-stream")
 
 # Alternative AI consultation endpoint (keeping for backward compatibility)
-@app.post("/ai/consult/", response_model=ChatResponse)
+@app.post("/ai/consult", response_model=ChatResponse)
 async def consult_ai_alt(request: ChatRequest, current_user: User = Depends(get_current_active_user)):
-    return await generate_ai_response(request)
+    # This one remains non-streaming for now, or could also be updated if needed
+    return await generate_ai_response(request) # This will likely error if generate_ai_response is only a generator
 
 # Mock AI response endpoint (for testing)
 @app.post("/ai/mock-chat")

@@ -125,47 +125,75 @@ watch(messages, () => {
 async function sendMessage() {
   if (!userInput.value.trim() || loading.value) return;
   
-  // 添加用户消息
-  const userMessage = userInput.value.trim();
-  messages.value.push({ role: 'user', content: userMessage });
-  userInput.value = '';
+  const userMessage = { role: 'user', content: userInput.value };
+  messages.value.push(userMessage);
   
-  // 设置加载状态
+  // Add a placeholder for the assistant's response
+  messages.value.push({ role: 'assistant', content: '' });
+  
+  const currentInput = userInput.value;
+  userInput.value = ''; // Clear input field
   loading.value = true;
-  
+
+  // Prepare messages for the API (last few messages for context, or as per your backend logic)
+  // For simplicity, sending all current messages. Adjust if needed.
+  const apiMessages = messages.value.slice(0, -1).map(msg => ({ // Exclude the empty assistant message placeholder
+    role: msg.role,
+    content: msg.content
+  }));
+   // Add the current user input that triggered this call
+  apiMessages.push({role: 'user', content: currentInput});
+
   try {
-    // 准备发送到后端的消息格式
-    const chatMessages = messages.value.map(msg => ({
-      role: msg.role,
-      content: msg.content
-    }));
-    
-    // 调用后端AI聊天API
-    const response = await axios.post('http://localhost:8000/ai/chat', {
-      messages: chatMessages
-    }, {
+    const response = await fetch('http://localhost:8000/api/ai/chat', {
+      method: 'POST',
       headers: {
-        'Authorization': `Bearer ${userStore.token}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${userStore.token}` // Assuming token is stored in userStore
+      },
+      body: JSON.stringify({ messages: apiMessages })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ detail: 'Unknown error occurred' }));
+      const assistantMessageIndex = messages.value.length - 1;
+      messages.value[assistantMessageIndex].content = `Error: ${errorData.detail || response.statusText}`;
+      loading.value = false;
+      return;
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    const assistantMessageIndex = messages.value.length - 1;
+
+    let done = false;
+    while (!done) {
+      const { value, done: readerDone } = await reader.read();
+      done = readerDone;
+      if (value) {
+        const chunk = decoder.decode(value, { stream: true });
+        messages.value[assistantMessageIndex].content += chunk;
+        // Auto-scroll as content is added
+        nextTick(() => {
+          if (messagesContainer.value) {
+            messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
+          }
+        });
       }
-    });
-    
-    // 添加AI回复
-    messages.value.push({ 
-      role: 'assistant', 
-      content: response.data.response 
-    });
-    
-    // 保存当前对话到历史记录
-    saveCurrentConversation();
+    }
+    // Final decode for any remaining buffered data if stream ended abruptly
+    // const finalChunk = decoder.decode(); 
+    // if (finalChunk) { messages.value[assistantMessageIndex].content += finalChunk; }
+
   } catch (error) {
-    console.error('AI聊天请求失败:', error);
-    messages.value.push({ 
-      role: 'assistant', 
-      content: '抱歉，我遇到了一些问题。请稍后再试或联系管理员。' 
-    });
+    console.error('Error sending message or processing stream:', error);
+    const assistantMessageIndex = messages.value.length - 1;
+    if (messages.value[assistantMessageIndex]) {
+        messages.value[assistantMessageIndex].content = '抱歉，处理您的请求时发生错误。';
+    }
   } finally {
     loading.value = false;
+    saveCurrentConversation(); // Save after the full response is received
   }
 }
 
