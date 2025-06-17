@@ -8,9 +8,11 @@ import uvicorn
 from datetime import datetime, timedelta
 
 from database import create_db_and_tables, get_session, User, ChatConversation, ChatMessage
+from legal_database import LegalArticle, Discussion, Comment, UserProfile
 from schemas import UserCreate, UserResponse, Token
 from chat_schemas import ConversationCreate, ConversationResponse, ConversationListItem
 from pydantic import BaseModel
+from legal_routes import router as legal_router
 
 class LoginRequest(BaseModel):
     username: str
@@ -30,7 +32,7 @@ app = FastAPI(title="Legal Consultation API")
 # Configure CORS - specifically allow the frontend origin
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Specifically allow the frontend origin
+    allow_origins=["http://localhost:5173"],  # Specifically allow the frontend origin
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],  # Explicitly list allowed methods
     allow_headers=["Content-Type", "Authorization", "Accept"],  # Explicitly list allowed headers
@@ -62,6 +64,9 @@ async def add_custom_headers(request, call_next):
     response = await call_next(request)
     response.headers["X-Server-Status"] = "Running"
     return response
+
+# 包含法律相关路由
+app.include_router(legal_router)
 
 # Create database tables on startup
 @app.on_event("startup")
@@ -302,4 +307,4 @@ async def delete_conversation(
 # Run the application
 if __name__ == "__main__":
     # Use port 8000 to match your frontend configuration
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

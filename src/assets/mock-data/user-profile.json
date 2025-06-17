@@ -1,0 +1,10 @@
+{
+  "id": 1,
+  "username": "demo_user",
+  "email": "demo@example.com",
+  "full_name": "演示用户",
+  "legal_specialty": "民商法",
+  "bio": "这是一个演示用户账号，用于展示法律助手平台的功能和特性。",
+  "created_at": "2023-01-01T00:00:00Z",
+  "updated_at": "2023-01-01T00:00:00Z"
+}
