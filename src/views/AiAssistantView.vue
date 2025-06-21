@@ -1,10 +1,16 @@
 <template>
   <div class="ai-assistant-container" :class="{ 'senior-mode': seniorMode }">
+    <!-- 移动端遮罩层 -->
+    <div v-if="showHistoryPanel" class="mobile-overlay" @click="toggleHistoryPanel"></div>
+    
     <!-- 左侧历史记录面板 -->
-    <div class="history-panel">
+    <div class="history-panel" :class="{ 'mobile-open': showHistoryPanel }">
       <div class="history-header">
         <h3>历史记录</h3>
-        <button @click="createNewConversation" class="new-chat-btn">新对话</button>
+        <div class="history-controls">
+          <button @click="createNewConversation" class="new-chat-btn">新对话</button>
+          <button @click="toggleHistoryPanel" class="close-panel-btn mobile-only">×</button>
+        </div>
       </div>
       <div class="history-list">
         <div 
@@ -23,16 +29,21 @@
     </div>
     <div class="main-content">
     <div class="header">
-      <h1>理工包青天</h1>
-      <div class="mode-controls">
-        <label class="senior-mode-toggle">
-          <input type="checkbox" v-model="seniorMode">
-          <span class="toggle-label">老年模式</span>
-        </label>
+      <div class="header-left">
+        <button @click="toggleHistoryPanel" class="menu-btn mobile-only">☰</button>
+        <h1>理工包青天</h1>
       </div>
-      <div class="user-info" v-if="userStore.user">
-        <span>欢迎, {{ userStore.user.username }}</span>
-        <button @click="logout" class="logout-btn">退出登录</button>
+      <div class="header-right">
+        <div class="mode-controls">
+          <label class="senior-mode-toggle">
+            <input type="checkbox" v-model="seniorMode">
+            <span class="toggle-label">老年模式</span>
+          </label>
+        </div>
+        <div class="user-info" v-if="userStore.user">
+          <span>欢迎, {{ userStore.user.username }}</span>
+          <button @click="logout" class="logout-btn">退出登录</button>
+        </div>
       </div>
     </div>
 
@@ -80,6 +91,9 @@ const userStore = useUserStore();
 const router = useRouter();
 const userInput = ref('');
 const seniorMode = ref(false);
+
+// 移动端历史记录面板控制
+const showHistoryPanel = ref(false);
 
 // 对话历史记录
 const conversations = ref([]);
@@ -323,6 +337,11 @@ async function switchConversation(index) {
       { role: 'assistant', content: '您好！我是您的法律咨询助手。请问有什么法律问题我可以帮您解答？' }
     ];
   }
+  
+  // 移动端切换对话后关闭历史记录面板
+  if (window.innerWidth <= 768) {
+    showHistoryPanel.value = false;
+  }
 }
 
 // 从后端加载对话历史
@@ -384,6 +403,11 @@ function logout() {
   router.push('/login');
 }
 
+// 切换移动端历史记录面板
+function toggleHistoryPanel() {
+  showHistoryPanel.value = !showHistoryPanel.value;
+}
+
 // 渲染Markdown内容
 function renderMarkdown(content) {
   if (!content) return '';
@@ -415,36 +439,128 @@ function renderMarkdown(content) {
   transition: all 0.3s ease;
 }
 
-/* 老年模式样式 */
+/* 老年模式样式 - 蓝白主题 */
 .senior-mode {
-  font-size: 120%;
-  font-weight: 500;
+  font-size: 140%;
+  font-weight: 600;
+  background: linear-gradient(135deg, #e3f2fd 0%, #f0f8ff 100%);
+  border: 3px solid #2196f3;
+  border-radius: 15px;
+  padding: 20px;
+  box-shadow: 0 8px 32px rgba(33, 150, 243, 0.2);
+}
+
+.senior-mode .ai-assistant-container {
+  background: linear-gradient(135deg, #e3f2fd 0%, #f0f8ff 100%);
 }
 
 .senior-mode button {
-  font-size: 120%;
+  font-size: 140%;
   font-weight: bold;
-  padding: 12px 24px;
+  padding: 16px 32px;
+  border-radius: 12px;
+  min-height: 56px;
+  background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+  border: none;
+  color: white;
+  box-shadow: 0 4px 16px rgba(33, 150, 243, 0.3);
+  transition: all 0.3s ease;
+}
+
+.senior-mode button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(33, 150, 243, 0.4);
 }
 
 .senior-mode textarea {
-  font-size: 120%;
-  font-weight: 500;
-  padding: 16px;
+  font-size: 140%;
+  font-weight: 600;
+  padding: 20px;
+  border: 3px solid #2196f3;
+  border-radius: 12px;
+  min-height: 80px;
+  background: #fff;
+  box-shadow: inset 0 2px 8px rgba(33, 150, 243, 0.1);
 }
 
 .senior-mode .message-content {
-  font-size: 120%;
-  font-weight: 500;
-  line-height: 1.6;
+  font-size: 140%;
+  font-weight: 600;
+  line-height: 1.8;
+  padding: 20px;
+  background: #fff;
+  border-radius: 12px;
+  border: 2px solid #2196f3;
+  margin: 10px 0;
+  color: #333 !important;
 }
 
 .senior-mode h1 {
-  font-size: 180%;
+  font-size: 200%;
+  font-weight: 700;
+  color: #2196f3;
+  text-shadow: 2px 2px 4px rgba(33, 150, 243, 0.2);
 }
 
 .senior-mode .user-info span {
+  font-size: 140%;
+  font-weight: 600;
+  color: #2196f3;
+}
+
+.senior-mode .history-item {
   font-size: 120%;
+  font-weight: 600;
+  padding: 16px 20px;
+  border: 2px solid #2196f3;
+  background: #fff;
+  margin-bottom: 12px;
+}
+
+.senior-mode .history-item:hover {
+  background: #e3f2fd;
+  transform: translateX(5px);
+}
+
+.senior-mode .history-item.active {
+  background: #2196f3;
+  color: white;
+}
+
+.senior-mode .chat-input {
+  border: 3px solid #2196f3;
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.senior-mode .send-button {
+  background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+  font-size: 140%;
+  padding: 16px 24px;
+  min-width: 120px;
+}
+
+.senior-mode .new-chat-btn {
+  background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+  font-size: 120%;
+  padding: 12px 20px;
+  min-height: 48px;
+}
+
+.senior-mode .logout-btn {
+  font-size: 120%;
+  padding: 12px 20px;
+  border: 3px solid #2196f3;
+  background: #fff;
+  color: #2196f3;
+  font-weight: 600;
+}
+
+.senior-mode .logout-btn:hover {
+  background: #2196f3;
+  color: white;
+  transform: translateY(-2px);
 }
 
 .main-content {
@@ -478,17 +594,51 @@ function renderMarkdown(content) {
   align-items: center;
   cursor: pointer;
   user-select: none;
+  background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+  padding: 12px 20px;
+  border-radius: 25px;
+  border: 3px solid #2196f3;
+  box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+  transition: all 0.3s ease;
+  margin-left: 20px;
+}
+
+.senior-mode-toggle:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
 }
 
 .senior-mode-toggle input {
-  margin-right: 8px;
-  width: 18px;
-  height: 18px;
+  margin-right: 12px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  accent-color: #fff;
 }
 
 .toggle-label {
-  color: #1976d2;
-  font-weight: 500;
+  color: white;
+  font-weight: 700;
+  font-size: 16px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.senior-mode .senior-mode-toggle {
+  background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
+  border-color: #1976d2;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 4px 15px rgba(25, 118, 210, 0.3);
+  }
+  50% {
+    box-shadow: 0 8px 25px rgba(25, 118, 210, 0.5);
+  }
+  100% {
+    box-shadow: 0 4px 15px rgba(25, 118, 210, 0.3);
+  }
 }
 
 .header h1 {
@@ -521,48 +671,59 @@ function renderMarkdown(content) {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
-  background-color: #f9f9f9;
-  border-radius: 8px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
 }
 
 /* 历史记录面板样式 */
 .history-panel {
-  width: 280px;
+  width: 300px;
   height: 100vh;
-  background-color: #f0f2f5;
-  border-right: 1px solid #e0e0e0;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-right: 1px solid rgba(224, 224, 224, 0.3);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(10px);
 }
 
 .history-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #e0e0e0;
+  padding: 24px;
+  border-bottom: 1px solid rgba(224, 224, 224, 0.3);
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .history-header h3 {
   margin: 0;
   color: #333;
+  font-weight: 600;
+  font-size: 18px;
 }
 
 .new-chat-btn {
-  background-color: #1976d2;
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
   color: white;
   border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
+  padding: 10px 16px;
+  border-radius: 12px;
   cursor: pointer;
   font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
 }
 
 .new-chat-btn:hover {
-  background-color: #1565c0;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(25, 118, 210, 0.4);
 }
 
 .history-list {
@@ -572,30 +733,37 @@ function renderMarkdown(content) {
 }
 
 .history-item {
-  padding: 12px 15px;
-  border-radius: 6px;
-  margin-bottom: 8px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  margin-bottom: 10px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.3s ease;
   border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(5px);
 }
 
 .history-item:hover {
-  background-color: #e8eaf6;
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateX(5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .history-item.active {
-  background-color: #e3f2fd;
-  border-color: #bbdefb;
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border-color: #2196f3;
+  box-shadow: 0 4px 16px rgba(33, 150, 243, 0.2);
+  transform: translateX(8px);
 }
 
 .history-title {
-  font-weight: 500;
+  font-weight: 600;
   margin-bottom: 5px;
   color: #333;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 15px;
 }
 
 .history-date {
@@ -773,5 +941,349 @@ button:disabled {
 .disclaimer p {
   margin: 0;
   line-height: 1.4;
+}
+
+/* 移动端响应式样式 */
+@media (max-width: 768px) {
+  .ai-assistant-container {
+    height: 100vh;
+    max-width: 100%;
+    padding: 0;
+  }
+
+  /* 移动端遮罩层 */
+  .mobile-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 998;
+    display: block;
+  }
+
+  /* 历史记录面板移动端样式 */
+  .history-panel {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    width: 80%;
+    max-width: 320px;
+    height: 100vh;
+    z-index: 999;
+    transition: left 0.3s ease;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  }
+
+  .history-panel.mobile-open {
+    left: 0;
+  }
+
+  /* 历史记录头部控制按钮 */
+  .history-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .close-panel-btn {
+    background: #f44336;
+    color: white;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+  }
+
+  .close-panel-btn:hover {
+    background: #d32f2f;
+    transform: scale(1.1);
+  }
+
+  /* 主内容区域 */
+  .main-content {
+    width: 100%;
+    height: 100vh;
+    padding: 10px;
+  }
+
+  /* 头部样式 */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    margin-bottom: 10px;
+    flex-wrap: nowrap;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .header h1 {
+    font-size: 20px;
+    margin: 0;
+  }
+
+  /* 移动端菜单按钮 */
+  .menu-btn {
+    background: #2196f3;
+    color: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+  }
+
+  .menu-btn:hover {
+    background: #1976d2;
+    transform: scale(1.05);
+  }
+
+  /* 显示/隐藏移动端专用元素 */
+  .mobile-only {
+    display: block;
+  }
+
+  /* 老年模式切换按钮移动端优化 */
+  .senior-mode-toggle {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+
+  .senior-mode-toggle input {
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+  }
+
+  .toggle-label {
+    font-size: 14px;
+  }
+
+  /* 用户信息移动端优化 */
+  .user-info {
+    flex-direction: column;
+    gap: 5px;
+    align-items: flex-end;
+  }
+
+  .user-info span {
+    font-size: 12px;
+  }
+
+  .logout-btn {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+
+  /* 聊天容器移动端优化 */
+  .chat-container {
+    height: calc(100vh - 80px);
+    border-radius: 15px;
+  }
+
+  .chat-messages {
+    padding: 15px;
+    max-height: calc(100vh - 200px);
+  }
+
+  .message {
+    max-width: 90%;
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+
+  /* 聊天输入框移动端优化 */
+  .chat-input {
+    padding: 10px;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .chat-input textarea {
+    width: 100%;
+    height: 80px;
+    font-size: 16px;
+    border-radius: 8px;
+  }
+
+  .chat-input button {
+    width: 100%;
+    height: 44px;
+    font-size: 16px;
+    border-radius: 8px;
+    margin-left: 0;
+  }
+
+  /* 免责声明移动端优化 */
+  .disclaimer {
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+
+  /* 老年模式移动端优化 */
+  .senior-mode .header h1 {
+    font-size: 24px;
+  }
+
+  .senior-mode .menu-btn {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+
+  .senior-mode .message {
+    font-size: 18px;
+    padding: 16px;
+  }
+
+  .senior-mode .chat-input textarea {
+    font-size: 18px;
+    height: 100px;
+  }
+
+  .senior-mode .chat-input button {
+    height: 56px;
+    font-size: 18px;
+  }
+}
+
+/* 430px宽度特别优化 */
+@media (max-width: 430px) {
+  .header {
+    padding: 8px 0;
+  }
+
+  .header h1 {
+    font-size: 18px;
+  }
+
+  .menu-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+
+  .senior-mode-toggle {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .senior-mode-toggle input {
+    width: 16px;
+    height: 16px;
+  }
+
+  .toggle-label {
+    font-size: 12px;
+  }
+
+  .user-info span {
+    font-size: 11px;
+  }
+
+  .logout-btn {
+    padding: 3px 6px;
+    font-size: 11px;
+  }
+
+  .chat-messages {
+    padding: 10px;
+  }
+
+  .message {
+    font-size: 13px;
+    padding: 8px 10px;
+  }
+
+  .chat-input {
+    padding: 8px;
+  }
+
+  .chat-input textarea {
+    height: 70px;
+    font-size: 14px;
+  }
+
+  .chat-input button {
+    height: 40px;
+    font-size: 14px;
+  }
+
+  /* 老年模式430px优化 */
+  .senior-mode .header h1 {
+    font-size: 20px;
+  }
+
+  .senior-mode .menu-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+  }
+
+  .senior-mode .message {
+    font-size: 16px;
+    padding: 12px;
+  }
+
+  .senior-mode .chat-input textarea {
+    font-size: 16px;
+    height: 90px;
+  }
+
+  .senior-mode .chat-input button {
+    height: 50px;
+    font-size: 16px;
+  }
+}
+
+/* 桌面端隐藏移动端专用元素 */
+@media (min-width: 769px) {
+  .mobile-only {
+    display: none;
+  }
+
+  .mobile-overlay {
+    display: none;
+  }
+
+  .history-controls {
+    display: block;
+  }
+
+  .header-left {
+    display: block;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
 }
 </style>

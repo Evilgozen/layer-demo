@@ -5,6 +5,7 @@ import AiAssistantView from '../views/AiAssistantView.vue'
 import LegalArticlesView from '../views/LegalArticlesView.vue'
 import DiscussionsView from '../views/DiscussionsView.vue'
 import DiscussionDetailView from '../views/DiscussionDetailView.vue'
+import DiscussionDetailMockView from '../views/DiscussionDetailMockView.vue'
 import UserProfileView from '../views/UserProfileView.vue'
 import LegalArticleDetailView from '../views/LegalArticleDetailView.vue'
 
@@ -51,6 +52,12 @@ const router = createRouter({
       path: '/discussion/:id',
       name: 'discussion-detail',
       component: DiscussionDetailView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/discussion-mock/:id',
+      name: 'discussion-detail-mock',
+      component: DiscussionDetailMockView,
       meta: { requiresAuth: true }
     },
     {

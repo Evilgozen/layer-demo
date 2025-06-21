@@ -1,0 +1,44 @@
+[
+  {
+    "date": "2025-05-01",
+    "discussions": 2,
+    "comments": 5,
+    "consultations": 1
+  },
+  {
+    "date": "2025-05-02",
+    "discussions": 1,
+    "comments": 3,
+    "consultations": 0
+  },
+  {
+    "date": "2025-05-03",
+    "discussions": 0,
+    "comments": 4,
+    "consultations": 2
+  },
+  {
+    "date": "2025-05-04",
+    "discussions": 3,
+    "comments": 7,
+    "consultations": 1
+  },
+  {
+    "date": "2025-05-05",
+    "discussions": 1,
+    "comments": 2,
+    "consultations": 3
+  },
+  {
+    "date": "2025-06-01",
+    "discussions": 0,
+    "comments": 5,
+    "consultations": 2
+  },
+  {
+    "date": "2025-06-02",
+    "discussions": 2,
+    "comments": 6,
+    "consultations": 0
+  }
+]

@@ -1,10 +1,16 @@
 <template>
-  <div class="discussions-container">
+  <div class="discussions-container" :class="{ 'senior-mode': seniorMode }">
     <div class="header">
       <h1>法律讨论区</h1>
-      <div class="user-info" v-if="userStore.user">
-        <span>欢迎, {{ userStore.user.username }}</span>
-        <button @click="logout" class="logout-btn">退出登录</button>
+      <div class="header-controls">
+        <div class="senior-mode-toggle" @click="toggleSeniorMode">
+          <input type="checkbox" v-model="seniorMode" />
+          <span class="toggle-label">老年模式</span>
+        </div>
+        <div class="user-info" v-if="userStore.user">
+          <span>欢迎, {{ userStore.user.username }}</span>
+          <button @click="logout" class="logout-btn">退出登录</button>
+        </div>
       </div>
     </div>
 
@@ -77,7 +83,7 @@
           <div class="discussion-content">{{ discussion.content }}</div>
           <div class="discussion-footer">
             <span class="comments-count">{{ discussion.comments_count }} 条评论</span>
-            <button @click="viewDiscussionDetail(discussion.id)" class="view-detail-btn">
+            <button @click="viewDiscussionMock(discussion.id)" class="view-detail-btn">
               查看详情
             </button>
           </div>
@@ -85,7 +91,7 @@
       </div>
 
       <!-- 分页控制 -->
-      <div class="pagination" v-if="discussions.length > 0">
+      <div class="pagination" v-if="discussions.length > 0 || currentPage > 2">
         <button 
           @click="prevPage" 
           :disabled="currentPage === 1"
@@ -93,10 +99,16 @@
         >
           上一页
         </button>
-        <span class="page-info">{{ currentPage }} / {{ totalPages }}</span>
+        <div class="page-selector">
+          <span>第</span>
+          <select v-model="currentPage" @change="fetchDiscussions">
+            <option v-for="page in 100" :key="page" :value="page">{{ page }}</option>
+          </select>
+          <span>页 / 共 100 页</span>
+        </div>
         <button 
           @click="nextPage" 
-          :disabled="currentPage === totalPages"
+          :disabled="currentPage >= 100"
           class="pagination-btn"
         >
           下一页
@@ -130,7 +142,8 @@ const loading = ref(false);
 const currentPage = ref(1);
 const pageSize = ref(10);
 const totalItems = ref(0);
-const totalPages = computed(() => Math.ceil(totalItems.value / pageSize.value));
+// 显示100页，但实际只有前两页有数据
+const totalPages = ref(100);
 
 // 新讨论表单
 const showNewDiscussionForm = ref(false);
@@ -140,6 +153,14 @@ const newDiscussion = ref({
   legal_article_id: null
 });
 const isSubmitting = ref(false);
+
+// 老年模式
+const seniorMode = ref(false);
+
+// 切换老年模式
+function toggleSeniorMode() {
+  seniorMode.value = !seniorMode.value;
+}
 
 // 初始化加载
 onMounted(async () => {
@@ -194,10 +215,15 @@ async function fetchDiscussions() {
     // 计算总数量
     totalItems.value = filteredDiscussions.length;
     
-    // 分页处理
-    const start = (currentPage.value - 1) * pageSize.value;
-    const end = start + pageSize.value;
-    discussions.value = filteredDiscussions.slice(start, end);
+    // 分页处理 - 只显示前两页的数据，其他页显示空
+    if (currentPage.value <= 2) {
+      const start = (currentPage.value - 1) * pageSize.value;
+      const end = start + pageSize.value;
+      discussions.value = filteredDiscussions.slice(start, end);
+    } else {
+      // 第3页及以后显示空数据
+      discussions.value = [];
+    }
     
     console.log('使用模拟讨论数据：', discussions.value);
   } catch (error) {
@@ -287,6 +313,11 @@ function viewDiscussionDetail(discussionId) {
   router.push(`/discussion/${discussionId}`);
 }
 
+// 查看模拟讨论详情
+function viewDiscussionMock(discussionId) {
+  router.push(`/discussion-mock/${discussionId}`);
+}
+
 // 格式化日期
 function formatDate(dateString) {
   const date = new Date(dateString);
@@ -326,6 +357,12 @@ function logout() {
   color: #333;
 }
 
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
 .user-info {
   display: flex;
   align-items: center;
@@ -339,6 +376,40 @@ function logout() {
   padding: 8px 16px;
   border-radius: 4px;
   cursor: pointer;
+}
+
+/* 老年模式切换按钮 */
+.senior-mode-toggle {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+  padding: 12px 20px;
+  border-radius: 25px;
+  border: 3px solid #2196f3;
+  box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+  transition: all 0.3s ease;
+}
+
+.senior-mode-toggle:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+}
+
+.senior-mode-toggle input {
+  margin-right: 12px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  accent-color: #fff;
+}
+
+.toggle-label {
+  color: white;
+  font-weight: 700;
+  font-size: 16px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .related-article {
@@ -535,6 +606,11 @@ function logout() {
   align-items: center;
 }
 
+.discussion-actions {
+  display: flex;
+  gap: 10px;
+}
+
 .comments-count {
   color: #666;
   font-size: 0.9em;
@@ -542,6 +618,15 @@ function logout() {
 
 .view-detail-btn {
   background-color: #2196F3;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.view-mock-btn {
+  background-color: #9C27B0;
   color: white;
   border: none;
   padding: 8px 16px;
@@ -573,5 +658,150 @@ function logout() {
 
 .page-info {
   color: #666;
+}
+
+.page-selector {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.page-selector select {
+  padding: 5px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+/* 老年模式样式 - 蓝白主题 */
+.senior-mode {
+  font-size: 140%;
+  font-weight: 600;
+  background: linear-gradient(135deg, #e3f2fd 0%, #f0f8ff 100%);
+  border: 3px solid #2196f3;
+  border-radius: 15px;
+  padding: 20px;
+  box-shadow: 0 8px 32px rgba(33, 150, 243, 0.2);
+}
+
+.senior-mode h1 {
+  font-size: 200%;
+  font-weight: 700;
+  color: #2196f3;
+  text-shadow: 2px 2px 4px rgba(33, 150, 243, 0.2);
+}
+
+.senior-mode h2 {
+  font-size: 180%;
+  font-weight: 700;
+  color: #2196f3;
+}
+
+.senior-mode h3 {
+  font-size: 160%;
+  font-weight: 600;
+  color: #2196f3;
+}
+
+.senior-mode button {
+  font-size: 140%;
+  font-weight: bold;
+  padding: 16px 32px;
+  border-radius: 12px;
+  min-height: 56px;
+  background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+  border: none;
+  color: white;
+  box-shadow: 0 4px 16px rgba(33, 150, 243, 0.3);
+  transition: all 0.3s ease;
+}
+
+.senior-mode button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(33, 150, 243, 0.4);
+}
+
+.senior-mode input, .senior-mode textarea {
+  font-size: 140%;
+  font-weight: 600;
+  padding: 20px;
+  border: 3px solid #2196f3;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: inset 0 2px 8px rgba(33, 150, 243, 0.1);
+}
+
+.senior-mode .discussion-card {
+  border: 3px solid #2196f3;
+  background: #fff;
+  padding: 24px;
+  margin-bottom: 20px;
+  border-radius: 15px;
+  box-shadow: 0 8px 24px rgba(33, 150, 243, 0.1);
+}
+
+.senior-mode .article-card {
+  border: 3px solid #2196f3;
+  background: #fff;
+  padding: 24px;
+  border-radius: 15px;
+  box-shadow: 0 8px 24px rgba(33, 150, 243, 0.1);
+}
+
+.senior-mode .new-discussion-form {
+  background: #e3f2fd;
+  border: 3px solid #2196f3;
+  padding: 24px;
+  border-radius: 15px;
+}
+
+.senior-mode .discussions-section {
+  background: #fff;
+  border: 3px solid #2196f3;
+  padding: 24px;
+  border-radius: 15px;
+  box-shadow: 0 8px 24px rgba(33, 150, 243, 0.1);
+}
+
+.senior-mode .related-article {
+  background: #e3f2fd;
+  border: 3px solid #2196f3;
+  padding: 24px;
+  border-radius: 15px;
+}
+
+.senior-mode .user-info span {
+  font-size: 140%;
+  font-weight: 600;
+  color: #2196f3;
+}
+
+.senior-mode .logout-btn {
+  background: #fff;
+  color: #2196f3;
+  border: 3px solid #2196f3;
+  font-weight: 600;
+}
+
+.senior-mode .logout-btn:hover {
+  background: #2196f3;
+  color: white;
+}
+
+.senior-mode .senior-mode-toggle {
+  background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
+  border-color: #1976d2;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 4px 15px rgba(25, 118, 210, 0.3);
+  }
+  50% {
+    box-shadow: 0 8px 25px rgba(25, 118, 210, 0.5);
+  }
+  100% {
+    box-shadow: 0 4px 15px rgba(25, 118, 210, 0.3);
+  }
 }
 </style>
